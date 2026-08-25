@@ -16,7 +16,6 @@ export function GeneratedClips({ clips }: GeneratedClipsProps) {
       <div className="clip-list">
         {clips.map((clip) => {
           const src = clip.url ? clipAssetUrl(clip.url) : "";
-          console.log(clip.url)
           const filename = `${clip.title.replace(/[^\w\-]+/g, "_")}.mp4`;
 
           return (

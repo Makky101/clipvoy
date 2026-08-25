@@ -47,6 +47,7 @@ async function processUploadedVideo(req: Request, res: Response): Promise<void> 
     }
 
     const body: ProcessingResponse = { clips };
+    console.log("Sending response")
     res.json(body);
   } finally {
     await cleanupUpload(file.path);

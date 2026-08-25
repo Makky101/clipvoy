@@ -3,6 +3,7 @@ import { GeneratedClips } from "./components/GeneratedClips";
 import { ProcessingStatus } from "./components/ProcessingStatus";
 import { VideoUploader } from "./components/VideoUploader";
 import { processVideo } from "./services/api";
+import clipvoyLogo from './assets/clipvoy-logo.svg'
 //import { mockClips } from "./components/mock_data";
 import type { Clip, ProcessingStage } from "./types";
 import "./App.css";
@@ -71,7 +72,7 @@ function App() {
   return (
     <main className="app">
       <header>
-        <h1>ClipVoy</h1>
+        <img src={clipvoyLogo} alt="ClipVoy-Logo" className="logo"/>
         <p className="muted">Upload a video and generate short-form clips.</p>
       </header>
 

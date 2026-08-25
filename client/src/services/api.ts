@@ -1,11 +1,10 @@
 import type { ProcessingResponse } from "../types";
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "'http://localhost:3000'";
-console.log('what is the API ->',API_BASE)
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:3000";
 
 export async function processVideo(file: File): Promise<ProcessingResponse> {
   const formData = new FormData();
   formData.append("video", file);
-
+  
   const response = await fetch(`${API_BASE}/api/videos/process`, {
     method: "POST",
     body: formData,
