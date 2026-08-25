@@ -4,6 +4,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express, { type NextFunction, type Request, type Response } from "express";
 import multer from "multer";
+import { setGlobalDispatcher, Agent } from 'undici';
 import { videoRouter } from "./routes/video.js";
 import { OUTPUT_DIR } from "./services/ffmpeg.js";
 import { AppError } from "./utils/appError.js";
@@ -16,6 +17,11 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 const app = express();
 const port = Number(process.env.PORT) || 3000;
 const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+
+setGlobalDispatcher(new Agent({
+  headersTimeout: 540000, // 9 minutes
+  bodyTimeout: 540000
+}));
 
 app.use(
   cors({
