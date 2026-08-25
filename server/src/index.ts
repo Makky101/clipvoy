@@ -19,7 +19,7 @@ const port = Number(process.env.PORT) || 3000;
 const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
 
 setGlobalDispatcher(new Agent({
-  headersTimeout: 540000, // 9 minutes
+  headersTimeout: 540000, 
   bodyTimeout: 540000
 }));
 
