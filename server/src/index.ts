@@ -17,7 +17,6 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 const app = express();
 const port = Number(process.env.PORT) || 3000;
 const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ["http://localhost:5173"];
-console.log('keys ->', allowedOrigins)
 
 setGlobalDispatcher(new Agent({
   headersTimeout: 540000, 
