@@ -1,4 +1,7 @@
-import type { Clip } from "../types";
+// Only used for testing
+
+
+/*import type { Clip } from "../types";
 
 export const mockClips: Clip[] = [
     {
@@ -22,4 +25,4 @@ export const mockClips: Clip[] = [
         reason: "Short punchy format",
         url: "/output/clip-ca13e9d0-72cc-461a-aac9-dcb236bc90e0.mp4",
     },
-];
+];*/
