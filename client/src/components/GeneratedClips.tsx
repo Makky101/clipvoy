@@ -1,13 +1,28 @@
 import type { Clip } from "../types";
-import { clipAssetUrl } from "../services/api";
+import { useState } from "react";
+import { clipAssetUrl,downloadClip } from "../services/api";
 
 interface GeneratedClipsProps {
   clips: Clip[];
 }
 
 export function GeneratedClips({ clips }: GeneratedClipsProps) {
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
   if (clips.length === 0) {
     return null;
+  }
+
+  const handleDownload = async (clip:Clip, filename: string) => {
+
+    if (!clip.url) return;
+    setDownloadingId(filename)
+    try {
+      await downloadClip(clip.url,filename)
+    }catch(err) {
+      console.error("Download failed:", err);
+    } finally {
+      setDownloadingId(null)
+    }
   }
 
   return (
@@ -18,7 +33,7 @@ export function GeneratedClips({ clips }: GeneratedClipsProps) {
           const src = clip.url ? clipAssetUrl(clip.url) : "";
           console.log('url ->', clip.url)
           console.log('src ->',src)
-          
+
           const filename = `${clip.title.replace(/[^\w\-]+/g, "_")}.mp4`;
 
           return (
@@ -34,9 +49,9 @@ export function GeneratedClips({ clips }: GeneratedClipsProps) {
                 {clip.start.toFixed(1)}s - {clip.end.toFixed(1)}s
               </p>
               {src && (
-                <a className="download" href={src} download={filename}>
-                  Download
-                </a>
+                <button type="button" className="download" onClick={() => handleDownload(clip,filename)} disabled={downloadingId === filename}>
+                  {downloadingId === filename ? "Downloading..." : "Download"}
+                </button>
               )}
             </article>
           );

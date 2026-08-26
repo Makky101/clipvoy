@@ -31,3 +31,23 @@ export function clipAssetUrl(url: string): string {
   
   return `${API_BASE}${url}`;
 }
+
+export async function downloadClip(url:string, filename:string): Promise<void> {
+  const response = await fetch(clipAssetUrl(url))
+
+  if (!response.ok){
+    throw new Error("Failed to download clip.")
+  }
+
+  const blob = await response.blob()
+  const blobUrl = URL.createObjectURL(blob)
+
+  const link = document.createElement("a")
+  link.href = blobUrl
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+
+  URL.revokeObjectURL(blobUrl)
+}
