@@ -160,7 +160,7 @@ export async function transcribeVideo(filePath: string): Promise<TranscriptSegme
   const transcriptId = await createTranscript(uploadUrl, apiKey);
   const transcript = await pollTranscript(transcriptId, apiKey);
 
-  console.log(`Transcription completed (id=${transcriptId}, words=${transcript.words?.length ?? 0})`);
+  //console.log(`Transcription completed (id=${transcriptId}, words=${transcript.words?.length ?? 0})`);
 
   const sentences = await fetchSentences(transcriptId, apiKey);
   const segments = sentences.length > 0 ? sentences : segmentsFromWords(transcript.words);
