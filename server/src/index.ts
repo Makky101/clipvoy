@@ -17,6 +17,7 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 const app = express();
 const port = Number(process.env.PORT) || 3000;
 const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ["http://localhost:5173"];
+console.log('keys ->', allowedOrigins)
 
 setGlobalDispatcher(new Agent({
   headersTimeout: 540000, 
@@ -57,7 +58,7 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 const server = app.listen(port, () => {
-  console.log(`ClipVoy server listening on http://localhost:${port}`);
+  console.log(`ClipVoy server listening on port: ${port}`);
 });
 
 server.timeout = 15 * 60 * 1000;
