@@ -25,9 +25,9 @@ export async function processVideo(file: File): Promise<ProcessingResponse> {
 
 export function clipAssetUrl(url: string): string {
 
-  if (url.startsWith("http://") || url.startsWith("https://")){
+  /*if (url.startsWith("http://") || url.startsWith("https://")){
     return url;
-  }
+  }*/
   
   return `${API_BASE}${url}`;
 }

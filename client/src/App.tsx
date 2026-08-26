@@ -4,7 +4,7 @@ import { ProcessingStatus } from "./components/ProcessingStatus";
 import { VideoUploader } from "./components/VideoUploader";
 import { processVideo } from "./services/api";
 import clipvoyLogo from './assets/clipvoy-logo.svg'
-//import { mockClips } from "./components/mock_data";
+import { mockClips } from "./components/mock_data";
 import type { Clip, ProcessingStage } from "./types";
 import "./App.css";
 
@@ -17,9 +17,9 @@ function App() {
 
   const pipeline: ProcessingStage[] = ["transcribing", "analyzing", "generating"];
 
- /* if (clips.length === 0) {
+  if (clips.length === 0) {
     setClips(mockClips);
-  }*/
+  }
 
   useEffect(() => {
     return () => {
