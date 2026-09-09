@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { GeneratedClips } from "./components/GeneratedClips";
 import { ProcessingStatus } from "./components/ProcessingStatus";
 import { VideoUploader } from "./components/VideoUploader";
@@ -13,9 +13,6 @@ function App() {
   const [stage, setStage] = useState<ProcessingStage>("idle");
   const [error, setError] = useState<string | null>(null);
   const [clips, setClips] = useState<Clip[]>([]);
-  const stageTimer = useRef<number | null>(null);
-
-  const pipeline: ProcessingStage[] = ["transcribing", "analyzing", "generating"];
 
   //test videos are stored on mock_videos folder on makky's machine
   // they are not available on server machine!
@@ -23,21 +20,6 @@ function App() {
   /*if (clips.length === 0) {
     setClips(mockClips);
   }*/
-
-  useEffect(() => {
-    return () => {
-      if (stageTimer.current) {
-        window.clearInterval(stageTimer.current);
-      }
-    };
-  }, []);
-
-  const clearStageTimer = () => {
-    if (stageTimer.current) {
-      window.clearInterval(stageTimer.current);
-      stageTimer.current = null;
-    }
-  };
 
   const handleProcess = async () => {
     if (!selectedFile) {
@@ -49,28 +31,20 @@ function App() {
     setClips([]);
     setStage("uploading");
 
-    let pipelineIndex = 0;
-    clearStageTimer();
-    stageTimer.current = window.setInterval(() => {
-      if (pipelineIndex < pipeline.length) {
-        setStage(pipeline[pipelineIndex]);
-        pipelineIndex += 1;
-      }
-    }, 8000);
-
     try {
-      const result = await processVideo(selectedFile);
-      clearStageTimer();
+      // The server now runs the pipeline in a background worker and
+      // reports real progress as it goes, instead of us guessing at
+      // timings client-side.
+      const result = await processVideo(selectedFile, setStage);
       setClips(result.clips);
       setStage("complete");
     } catch (err) {
-      clearStageTimer();
       setStage("idle");
       setError(err instanceof Error ? err.message : "Failed to process video.");
     }
   };
 
-  const busy = pipeline.includes(stage);
+  const busy = stage !== "idle" && stage !== "complete";
 
   return (
     <main className="app">

@@ -1,0 +1,306 @@
+diff --git a/client/src/App.tsx b/client/src/App.tsx
+index 0adddf7..67d64bd 100644
+--- a/client/src/App.tsx
++++ b/client/src/App.tsx
+@@ -1,4 +1,4 @@
+-import { useEffect, useRef, useState } from "react";
++import { useState } from "react";
+ import { GeneratedClips } from "./components/GeneratedClips";
+ import { ProcessingStatus } from "./components/ProcessingStatus";
+ import { VideoUploader } from "./components/VideoUploader";
+@@ -13,9 +13,6 @@ function App() {
+   const [stage, setStage] = useState<ProcessingStage>("idle");
+   const [error, setError] = useState<string | null>(null);
+   const [clips, setClips] = useState<Clip[]>([]);
+-  const stageTimer = useRef<number | null>(null);
+-
+-  const pipeline: ProcessingStage[] = ["transcribing", "analyzing", "generating"];
+ 
+   //test videos are stored on mock_videos folder on makky's machine
+   // they are not available on server machine!
+@@ -24,21 +21,6 @@ function App() {
+     setClips(mockClips);
+   }*/
+ 
+-  useEffect(() => {
+-    return () => {
+-      if (stageTimer.current) {
+-        window.clearInterval(stageTimer.current);
+-      }
+-    };
+-  }, []);
+-
+-  const clearStageTimer = () => {
+-    if (stageTimer.current) {
+-      window.clearInterval(stageTimer.current);
+-      stageTimer.current = null;
+-    }
+-  };
+-
+   const handleProcess = async () => {
+     if (!selectedFile) {
+       setError("Please select a video file first.");
+@@ -49,28 +31,20 @@ function App() {
+     setClips([]);
+     setStage("uploading");
+ 
+-    let pipelineIndex = 0;
+-    clearStageTimer();
+-    stageTimer.current = window.setInterval(() => {
+-      if (pipelineIndex < pipeline.length) {
+-        setStage(pipeline[pipelineIndex]);
+-        pipelineIndex += 1;
+-      }
+-    }, 8000);
+-
+     try {
+-      const result = await processVideo(selectedFile);
+-      clearStageTimer();
++      // The server now runs the pipeline in a background worker and
++      // reports real progress as it goes, instead of us guessing at
++      // timings client-side.
++      const result = await processVideo(selectedFile, setStage);
+       setClips(result.clips);
+       setStage("complete");
+     } catch (err) {
+-      clearStageTimer();
+       setStage("idle");
+       setError(err instanceof Error ? err.message : "Failed to process video.");
+     }
+   };
+ 
+-  const busy = pipeline.includes(stage);
++  const busy = stage !== "idle" && stage !== "complete";
+ 
+   return (
+     <main className="app">
+diff --git a/client/src/components/ProcessingStatus.tsx b/client/src/components/ProcessingStatus.tsx
+index 0f7f22b..fa3e59e 100644
+--- a/client/src/components/ProcessingStatus.tsx
++++ b/client/src/components/ProcessingStatus.tsx
+@@ -2,6 +2,7 @@ import type { ProcessingStage } from "../types";
+ 
+ const STAGE_LABELS: Record<Exclude<ProcessingStage, "idle">, string> = {
+   uploading: "Uploading video...",
++  queued: "Waiting in queue...",
+   transcribing: "Transcribing video...",
+   analyzing: "Analyzing transcript...",
+   generating: "Generating clips...",
+diff --git a/client/src/services/api.ts b/client/src/services/api.ts
+index 1e127a4..a7c287c 100644
+--- a/client/src/services/api.ts
++++ b/client/src/services/api.ts
+@@ -1,53 +1,92 @@
+-import type { ProcessingResponse } from "../types";
++import type { JobEnqueuedResponse, JobStatusResponse, ProcessingResponse, ProcessingStage } from "../types";
++
+ const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:3000";
+ 
+-export async function processVideo(file: File): Promise<ProcessingResponse> {
++const POLL_INTERVAL_MS = 2000;
++// The pipeline can genuinely take several minutes (transcription + LLM
++// analysis + FFmpeg encoding); this is a ceiling to stop polling forever if
++// something goes wrong, not an expected duration.
++const MAX_POLL_MS = 20 * 60 * 1000;
++
++function sleep(ms: number): Promise<void> {
++  return new Promise((resolve) => setTimeout(resolve, ms));
++}
++
++export async function processVideo(
++  file: File,
++  onStage?: (stage: ProcessingStage) => void,
++): Promise<ProcessingResponse> {
+   const formData = new FormData();
+   formData.append("video", file);
+-  
++
+   const response = await fetch(`${API_BASE}/api/videos/process`, {
+     method: "POST",
+     body: formData,
+   });
+ 
+-  const payload = (await response.json()) as ProcessingResponse & { error?: string };
++  const enqueued = (await response.json()) as JobEnqueuedResponse & { error?: string };
+ 
+   if (!response.ok) {
+-    throw new Error(payload.error || "Failed to process video.");
++    throw new Error(enqueued.error || "Failed to upload video.");
+   }
+ 
+-  if (!payload.clips) {
+-    throw new Error("The server did not return any clips.");
++  if (!enqueued.jobId) {
++    throw new Error("The server did not return a job id.");
+   }
+ 
+-  return payload;
++  onStage?.("queued");
++
++  const startedAt = Date.now();
++
++  // The upload request now returns almost immediately - the actual pipeline
++  // runs in a worker process, so we poll for its result instead of awaiting
++  // one long request.
++  while (true) {
++    if (Date.now() - startedAt > MAX_POLL_MS) {
++      throw new Error("Processing is taking longer than expected. Please try again later.");
++    }
++
++    await sleep(POLL_INTERVAL_MS);
++
++    const statusResponse = await fetch(`${API_BASE}/api/videos/jobs/${enqueued.jobId}`);
++    const status = (await statusResponse.json()) as JobStatusResponse & { error?: string };
++
++    if (!statusResponse.ok) {
++      throw new Error(status.error || "Failed to check processing status.");
++    }
++
++    if (status.status === "completed") {
++      return { clips: status.clips };
++    }
++
++    if (status.status === "failed") {
++      throw new Error(status.error || "Failed to process video.");
++    }
++
++    onStage?.(status.status === "processing" ? status.stage ?? "transcribing" : "queued");
++  }
+ }
+ 
+ export function clipAssetUrl(url: string): string {
+-
+-  /*if (url.startsWith("http://") || url.startsWith("https://")){
+-    return url;
+-  }*/
+-  
+   return `${API_BASE}${url}`;
+ }
+ 
+-export async function downloadClip(url:string, filename:string): Promise<void> {
+-  const response = await fetch(clipAssetUrl(url))
++export async function downloadClip(url: string, filename: string): Promise<void> {
++  const response = await fetch(clipAssetUrl(url));
+ 
+-  if (!response.ok){
+-    throw new Error("Failed to download clip.")
++  if (!response.ok) {
++    throw new Error("Failed to download clip.");
+   }
+ 
+-  const blob = await response.blob()
+-  const blobUrl = URL.createObjectURL(blob)
++  const blob = await response.blob();
++  const blobUrl = URL.createObjectURL(blob);
+ 
+-  const link = document.createElement("a")
+-  link.href = blobUrl
+-  link.download = filename
+-  document.body.appendChild(link)
+-  link.click()
+-  link.remove()
++  const link = document.createElement("a");
++  link.href = blobUrl;
++  link.download = filename;
++  document.body.appendChild(link);
++  link.click();
++  link.remove();
+ 
+-  URL.revokeObjectURL(blobUrl)
++  URL.revokeObjectURL(blobUrl);
+ }
+diff --git a/client/src/types.ts b/client/src/types.ts
+index c6b2339..e494ba6 100644
+--- a/client/src/types.ts
++++ b/client/src/types.ts
+@@ -16,4 +16,14 @@ export interface ProcessingResponse {
+   clips: Clip[];
+ }
+ 
+-export type ProcessingStage = "idle" | "uploading" | "transcribing" | "analyzing" | "generating" | "complete";
+\ No newline at end of file
++export interface JobEnqueuedResponse {
++  jobId: string;
++}
++
++export type JobStatusResponse =
++  | { status: "queued" }
++  | { status: "processing"; stage?: "transcribing" | "analyzing" | "generating" }
++  | { status: "completed"; clips: Clip[] }
++  | { status: "failed"; error: string };
++
++export type ProcessingStage = "idle" | "uploading" | "queued" | "transcribing" | "analyzing" | "generating" | "complete";
+\ No newline at end of file
+diff --git a/server/src/routes/video.ts b/server/src/routes/video.ts
+index f75d0c3..7db0c07 100644
+--- a/server/src/routes/video.ts
++++ b/server/src/routes/video.ts
+@@ -2,7 +2,9 @@ import { Router, type Request, type Response } from "express";
+ import { uploadVideo } from "../middleware/upload.js";
+ import { getVideoQueue } from "../queue/videoQueue.js";
+ import { AppError } from "../utils/appError.js";
+-import type { JobEnqueuedResponse, JobStatusResponse } from "../types.js";
++import type { JobEnqueuedResponse, JobStatusResponse, ProcessingStage } from "../types.js";
++
++const KNOWN_STAGES = new Set<ProcessingStage>(["transcribing", "analyzing", "generating"]);
+ 
+ export const videoRouter = Router();
+ 
+@@ -58,7 +60,11 @@ async function getJobStatus(req: Request, res: Response): Promise<void> {
+   } else if (state === "failed") {
+     body = { status: "failed", error: job.failedReason ?? "Processing failed." };
+   } else if (state === "active") {
+-    body = { status: "processing" };
++    const stage =
++      typeof job.progress === "string" && KNOWN_STAGES.has(job.progress as ProcessingStage)
++        ? (job.progress as ProcessingStage)
++        : undefined;
++    body = { status: "processing", stage };
+   } else {
+     // waiting, delayed, waiting-children, prioritized, etc.
+     body = { status: "queued" };
+diff --git a/server/src/types.ts b/server/src/types.ts
+index 3a84b6f..5d909f5 100644
+--- a/server/src/types.ts
++++ b/server/src/types.ts
+@@ -20,9 +20,11 @@ export interface JobEnqueuedResponse {
+   jobId: string;
+ }
+ 
++export type ProcessingStage = "transcribing" | "analyzing" | "generating";
++
+ export type JobStatusResponse =
+   | { status: "queued" }
+-  | { status: "processing" }
++  | { status: "processing"; stage?: ProcessingStage }
+   | { status: "completed"; clips: Clip[] }
+   | { status: "failed"; error: string };
+ 
+diff --git a/server/src/worker/worker.ts b/server/src/worker/worker.ts
+index 96027b1..4d49869 100644
+--- a/server/src/worker/worker.ts
++++ b/server/src/worker/worker.ts
+@@ -6,7 +6,7 @@ import { getVideoDurationSeconds } from "../services/ffmpeg.js";
+ import { analyzeTranscript } from "../services/openrouter.js";
+ import { cleanupUpload } from "../utils/cleanup.js";
+ import { renderClip } from "./render.js";
+-import type { Clip } from "../types.js";
++import type { Clip, ProcessingStage } from "../types.js";
+ 
+ // This now controls how many full pipelines (transcribe + analyze + render)
+ // run concurrently in this worker process, not just concurrent FFmpeg jobs -
+@@ -19,10 +19,14 @@ async function processVideoJob(job: Job<VideoJobData, VideoJobResult>): Promise<
+   const { uploadPath } = job.data;
+ 
+   try {
++    await job.updateProgress("transcribing" satisfies ProcessingStage);
+     const videoDuration = await getVideoDurationSeconds(uploadPath);
+     const segments = await transcribeVideo(uploadPath);
++
++    await job.updateProgress("analyzing" satisfies ProcessingStage);
+     const selected = await analyzeTranscript(segments, videoDuration);
+ 
++    await job.updateProgress("generating" satisfies ProcessingStage);
+     const clips: Clip[] = await Promise.all(
+       selected.map(async (clip) => {
+         const filename = await renderClip({

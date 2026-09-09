@@ -56,9 +56,20 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({ error: "Something went wrong while processing the video." });
 });
 
+// The render worker is now a fully separate process (run with
+// `npm run worker`), connected to this server only through Redis - it no
+// longer needs to be forked or shut down from here.
 const server = app.listen(port, () => {
   console.log(`ClipVoy server listening on port: ${port}`);
 });
 
 server.timeout = 15 * 60 * 1000;
 server.headersTimeout = 15 * 60 * 1000;
+
+function shutdown(signal: string): void {
+  console.log(`Received ${signal}, shutting down...`);
+  server.close(() => process.exit(0));
+}
+
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));

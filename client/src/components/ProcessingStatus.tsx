@@ -2,6 +2,7 @@ import type { ProcessingStage } from "../types";
 
 const STAGE_LABELS: Record<Exclude<ProcessingStage, "idle">, string> = {
   uploading: "Uploading video...",
+  queued: "Waiting in queue...",
   transcribing: "Transcribing video...",
   analyzing: "Analyzing transcript...",
   generating: "Generating clips...",

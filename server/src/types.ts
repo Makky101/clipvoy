@@ -16,6 +16,18 @@ export interface ProcessingResponse {
   clips: Clip[];
 }
 
+export interface JobEnqueuedResponse {
+  jobId: string;
+}
+
+export type ProcessingStage = "transcribing" | "analyzing" | "generating";
+
+export type JobStatusResponse =
+  | { status: "queued" }
+  | { status: "processing"; stage?: ProcessingStage }
+  | { status: "completed"; clips: Clip[] }
+  | { status: "failed"; error: string };
+
 export interface ApiErrorBody {
   error: string;
 }

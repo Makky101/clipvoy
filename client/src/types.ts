@@ -16,4 +16,14 @@ export interface ProcessingResponse {
   clips: Clip[];
 }
 
-export type ProcessingStage = "idle" | "uploading" | "transcribing" | "analyzing" | "generating" | "complete";
+export interface JobEnqueuedResponse {
+  jobId: string;
+}
+
+export type JobStatusResponse =
+  | { status: "queued" }
+  | { status: "processing"; stage?: "transcribing" | "analyzing" | "generating" }
+  | { status: "completed"; clips: Clip[] }
+  | { status: "failed"; error: string };
+
+export type ProcessingStage = "idle" | "uploading" | "queued" | "transcribing" | "analyzing" | "generating" | "complete";
