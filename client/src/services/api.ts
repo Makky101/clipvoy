@@ -27,11 +27,11 @@ export async function processVideo(
   const enqueued = (await response.json()) as JobEnqueuedResponse & { error?: string };
 
   if (!response.ok) {
-    throw new Error(enqueued.error || "Failed to upload video.");
+    throw new Error(enqueued.error || "Error_from_server: Failed to upload video.");
   }
 
   if (!enqueued.jobId) {
-    throw new Error("The server did not return a job id.");
+    throw new Error("Error_from_server: The server did not return a job id.");
   }
 
   onStage?.("queued");
@@ -60,7 +60,7 @@ export async function processVideo(
     }
 
     if (status.status === "failed") {
-      throw new Error(status.error || "Failed to process video.");
+      throw new Error(status.error || "Error_from_server: Failed to process video.");
     }
 
     onStage?.(status.status === "processing" ? status.stage ?? "transcribing" : "queued");
