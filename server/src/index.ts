@@ -60,7 +60,7 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
 // `npm run worker`), connected to this server only through Redis - it no
 // longer needs to be forked or shut down from here.
 const server = app.listen(port, () => {
-  console.log(`ClipVoy server listening on port: ${port}`);
+  console.log(`Server listening on port: ${port}`);
 });
 
 server.timeout = 15 * 60 * 1000;
