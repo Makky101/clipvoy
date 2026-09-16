@@ -7,6 +7,7 @@ import { analyzeTranscript } from "../services/openrouter.js";
 import { cleanupUpload } from "../utils/cleanup.js";
 import { renderClip } from "./render.js";
 import type { Clip, ProcessingStage } from "../types.js";
+import {S3Client,PutObjectCommand,GetObjectCommand} from "@aws-sdk/client-s3";
 
 // This now controls how many full pipelines (transcribe + analyze + render)
 // run concurrently in this worker process, not just concurrent FFmpeg jobs -
@@ -14,11 +15,12 @@ import type { Clip, ProcessingStage } from "../types.js";
 // the render step. Keep this modest; the render step is still the heaviest
 // part and multiple encodes will compete for CPU.
 const CONCURRENCY = Number(process.env.WORKER_CONCURRENCY) || 1;
-
+// Pulling from cloudflare worker goes here!
 async function processVideoJob(job: Job<VideoJobData, VideoJobResult>): Promise<VideoJobResult> {
   const { uploadPath } = job.data;
 
   try {
+    
     await job.updateProgress("transcribing" satisfies ProcessingStage);
     const videoDuration = await getVideoDurationSeconds(uploadPath);
     const segments = await transcribeVideo(uploadPath);

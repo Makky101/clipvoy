@@ -83,15 +83,15 @@ export async function analyzeTranscript(
     throw new AppError("OpenRouter analysis failed.", 502);
   }
   //what does it truly return?
-  console.log('--------------------------------');
+  /*console.log('--------------------------------');
   console.log('data ->',data);
-  console.log('--------------------------------');
+  console.log('--------------------------------');*/
 
   const content = data.choices?.[0]?.message?.content;
   // probably .content is not allowed
-  console.log('--------------------------------');
+  /*console.log('--------------------------------');
   console.log('content ->',content);
-  console.log('--------------------------------');
+  console.log('--------------------------------');*/
   if (!content) {
     throw new AppError("The analysis model returned an empty response.", 502);
   }

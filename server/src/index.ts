@@ -9,7 +9,7 @@ import { videoRouter } from "./routes/video.js";
 import { OUTPUT_DIR } from "./services/ffmpeg.js";
 import { AppError } from "./utils/appError.js";
 
-const __filename = fileURLToPath(import.meta.url);
+//const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
