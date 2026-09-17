@@ -14,13 +14,26 @@ import {S3Client,PutObjectCommand,GetObjectCommand} from "@aws-sdk/client-s3";
 // a meaningful step up from the old fork-based worker, which only offloaded
 // the render step. Keep this modest; the render step is still the heaviest
 // part and multiple encodes will compete for CPU.
+
 const CONCURRENCY = Number(process.env.WORKER_CONCURRENCY) || 1;
-// Pulling from cloudflare worker goes here!
+
+// Cloudflare worker configuration
+const s3 = new S3Client({
+  region: "auto",
+  endpoint: process.env.END_POINT,
+  credentials: {
+    // Provide your R2 Access Key ID and Secret Access Key
+    accessKeyId: process.env.ACCESS_KEY_ID as string,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY as string,
+  },
+});
+
 async function processVideoJob(job: Job<VideoJobData, VideoJobResult>): Promise<VideoJobResult> {
   const { uploadPath } = job.data;
 
   try {
-    
+    job.updateProgress("pulling" satisfies ProcessingStage)
+    //wait
     await job.updateProgress("transcribing" satisfies ProcessingStage);
     const videoDuration = await getVideoDurationSeconds(uploadPath);
     const segments = await transcribeVideo(uploadPath);

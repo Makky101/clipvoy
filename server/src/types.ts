@@ -20,7 +20,7 @@ export interface JobEnqueuedResponse {
   jobId: string;
 }
 
-export type ProcessingStage = "transcribing" | "analyzing" | "generating";
+export type ProcessingStage = "transcribing" | "analyzing" | "generating" | "uploading" |"pulling";
 
 export type JobStatusResponse =
   | { status: "queued" }
