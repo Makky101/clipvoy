@@ -2,8 +2,6 @@ import { Worker, type Job } from "bullmq";
 import { getRedisConnection } from "../queue/connection.js";
 import { VIDEO_QUEUE_NAME, type VideoJobData, type VideoJobResult } from "../queue/videoQueue.js";
 import { transcribeVideo } from "../services/assemblyai.js";
-import { pipeline } from "node:stream/promises";
-import { createWriteStream } from "node:fs";
 import { Readable } from "node:stream";
 import { getVideoDurationSeconds } from "../services/ffmpeg.js";
 import { analyzeTranscript } from "../services/openrouter.js";
@@ -11,6 +9,7 @@ import { cleanupUpload } from "../utils/cleanup.js";
 import { renderClip } from "./render.js";
 import type { Clip, ProcessingStage } from "../types.js";
 import {S3Client,PutObjectCommand,GetObjectCommand} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 // This now controls how many full pipelines (transcribe + analyze + render)
 // run concurrently in this worker process, not just concurrent FFmpeg jobs -
@@ -19,7 +18,7 @@ import {S3Client,PutObjectCommand,GetObjectCommand} from "@aws-sdk/client-s3";
 // part and multiple encodes will compete for CPU.
 
 const CONCURRENCY = Number(process.env.WORKER_CONCURRENCY) || 1;
-
+const bucket = process.env.BUCKET as string
 // Cloudflare worker configuration
 const s3 = new S3Client({
   region: "auto",
@@ -31,30 +30,22 @@ const s3 = new S3Client({
   },
 });
 
-// Streams the video than to downloade it as a whole
-async function downloadVideoToFile(bucket: string,key:string, outputPath:string){
-  const response = await s3.send(
-    new GetObjectCommand({
-      Bucket: process.env.BUCKET,
-      Key: 'whatever data you get from job.data'
-    }),
-  );
+async function generatePresignedUrl(bucket:string,key:string): Promise<string>{
+  const tempUrl = await getSignedUrl(
+    s3,
+    new GetObjectCommand({ Bucket: bucket, Key:key }),
+    { expiresIn: 3600 },
+  )
 
-  if (!response.Body) {
-    throw new Error("Response body is undefined.");
-  }
+  return tempUrl
 
-  const videoStream = response.Body as Readable;
-  await pipeline(videoStream, createWriteStream())
 }
 
 //Change what uploadPath does in each function
 async function processVideoJob(job: Job<VideoJobData, VideoJobResult>): Promise<VideoJobResult> {
   const { uploadPath } = job.data;
-
   try {
     await job.updateProgress("pulling" satisfies ProcessingStage)
-    
 
     await job.updateProgress("transcribing" satisfies ProcessingStage);
     const videoDuration = await getVideoDurationSeconds(uploadPath);
