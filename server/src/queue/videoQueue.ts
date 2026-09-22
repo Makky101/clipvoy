@@ -5,7 +5,7 @@ import type { Clip } from "../types.js";
 export const VIDEO_QUEUE_NAME = "video-processing";
 
 export interface VideoJobData {
-  uploadPath: string;
+  key: string;
   originalName: string;
 }
 

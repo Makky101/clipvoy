@@ -2,14 +2,13 @@ import { Worker, type Job } from "bullmq";
 import { getRedisConnection } from "../queue/connection.js";
 import { VIDEO_QUEUE_NAME, type VideoJobData, type VideoJobResult } from "../queue/videoQueue.js";
 import { transcribeVideo } from "../services/assemblyai.js";
-import { Readable } from "node:stream";
 import { getVideoDurationSeconds } from "../services/ffmpeg.js";
 import { analyzeTranscript } from "../services/openrouter.js";
-import { cleanupUpload } from "../utils/cleanup.js";
 import { renderClip } from "./render.js";
 import type { Clip, ProcessingStage } from "../types.js";
 import {S3Client,PutObjectCommand,GetObjectCommand} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+
 
 // This now controls how many full pipelines (transcribe + analyze + render)
 // run concurrently in this worker process, not just concurrent FFmpeg jobs -
@@ -38,19 +37,18 @@ async function generatePresignedUrl(bucket:string,key:string): Promise<string>{
   )
 
   return tempUrl
-
 }
 
-//Change what uploadPath does in each function
+// I have no clue what this function returns too till next time 
 async function processVideoJob(job: Job<VideoJobData, VideoJobResult>): Promise<VideoJobResult> {
-  const { uploadPath } = job.data;
+  // job.data needs to return key
+  const { key } = job.data;
   try {
     await job.updateProgress("pulling" satisfies ProcessingStage)
-
+    const url  = await generatePresignedUrl(bucket,key)
     await job.updateProgress("transcribing" satisfies ProcessingStage);
-    const videoDuration = await getVideoDurationSeconds(uploadPath);
-    const segments = await transcribeVideo(uploadPath);
-
+    const videoDuration = await getVideoDurationSeconds(url);
+    const segments = await transcribeVideo(url);
     await job.updateProgress("analyzing" satisfies ProcessingStage);
     const selected = await analyzeTranscript(segments, videoDuration);
 
@@ -58,7 +56,7 @@ async function processVideoJob(job: Job<VideoJobData, VideoJobResult>): Promise<
     const clips: Clip[] = await Promise.all(
       selected.map(async (clip) => {
         const filename = await renderClip({
-          inputPath: uploadPath,
+          inputPath: key,
           startTime: clip.start,
           endTime: clip.end,
         });
@@ -71,11 +69,11 @@ async function processVideoJob(job: Job<VideoJobData, VideoJobResult>): Promise<
     );
 
     return { clips };
-  } finally {
-    // The upload can only be cleaned up once rendering is done with it - it
-    // used to happen in the route's finally block, but the route no longer
-    // holds the request open long enough to own that responsibility.
-    await cleanupUpload(uploadPath);
+  } catch (error: unknown) {
+    if (error instanceof Error){
+      console.error('This error occured ->', error.message)
+    }
+    throw error
   }
 }
 

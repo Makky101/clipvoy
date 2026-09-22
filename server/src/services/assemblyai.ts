@@ -1,4 +1,3 @@
-import fs from "node:fs/promises";
 import { AppError } from "../utils/appError.js";
 import type { TranscriptSegment } from "../types.js";
 
@@ -12,30 +11,6 @@ function getApiKey(): string {
   return key;
 }
 
-async function uploadAudioFile(filePath: string, apiKey: string): Promise<string> {
-  const fileBytes = await fs.readFile(filePath);
-
-  const response = await fetch(`${ASSEMBLYAI_BASE}/upload`, {
-    method: "POST",
-    headers: {
-      authorization: apiKey,
-      "content-type": "application/octet-stream",
-    },
-    body: fileBytes,
-  });
-
-  if (!response.ok) {
-    throw new AppError("Failed to upload video to AssemblyAI.", 502);
-  }
-
-  const data = (await response.json()) as { upload_url?: string };
-  if (!data.upload_url) {
-    throw new AppError("AssemblyAI did not return an upload URL.", 502);
-  }
-
-  return data.upload_url;
-}
-
 interface AssemblyAiTranscript {
   id: string;
   status: "queued" | "processing" | "completed" | "error";
@@ -43,7 +18,7 @@ interface AssemblyAiTranscript {
   words?: Array<{ text: string; start: number; end: number }>;
 }
 
-async function createTranscript(audioUrl: string, apiKey: string): Promise<string> {
+async function createTranscript(url: string, apiKey: string): Promise<string> {
   const response = await fetch(`${ASSEMBLYAI_BASE}/transcript`, {
     method: "POST",
     headers: {
@@ -51,7 +26,7 @@ async function createTranscript(audioUrl: string, apiKey: string): Promise<strin
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      audio_url: audioUrl,
+      audio_url: url,
       punctuate: true,
       format_text: true,
     }),
@@ -154,10 +129,9 @@ function segmentsFromWords(words: AssemblyAiTranscript["words"]): TranscriptSegm
   return segments;
 }
 
-export async function transcribeVideo(filePath: string): Promise<TranscriptSegment[]> {
+export async function transcribeVideo(url: string): Promise<TranscriptSegment[]> {
   const apiKey = getApiKey();
-  const uploadUrl = await uploadAudioFile(filePath, apiKey);
-  const transcriptId = await createTranscript(uploadUrl, apiKey);
+  const transcriptId = await createTranscript(url, apiKey);
   const transcript = await pollTranscript(transcriptId, apiKey);
 
   console.log(`Transcription completed (id=${transcriptId}, words=${transcript.words?.length ?? 0})`);

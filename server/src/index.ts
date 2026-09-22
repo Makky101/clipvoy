@@ -4,9 +4,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express, { type NextFunction, type Request, type Response } from "express";
 import multer from "multer";
-import { setGlobalDispatcher, Agent } from 'undici';
 import { videoRouter } from "./routes/video.js";
-import { OUTPUT_DIR } from "./services/ffmpeg.js";
 import { AppError } from "./utils/appError.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -18,11 +16,6 @@ const app = express();
 const port = Number(process.env.PORT) || 3000;
 const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ["http://localhost:5173"];
 
-setGlobalDispatcher(new Agent({
-  headersTimeout: 540000, 
-  bodyTimeout: 540000
-}));
-
 app.use(
   cors({
     origin: allowedOrigins,
@@ -30,7 +23,6 @@ app.use(
 );
 app.use(express.json());
 
-app.use("/output", express.static(OUTPUT_DIR));
 app.use("/api/videos", videoRouter);
 
 app.get("/api/health", (_req, res) => {

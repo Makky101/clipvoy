@@ -20,7 +20,6 @@
     "ioredis": "^6.0.0",
     "multer": "^2.2.0",
     "tslog": "^5.2.0",
-    "undici": "^8.10.0",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
