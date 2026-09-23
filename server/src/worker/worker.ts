@@ -52,6 +52,7 @@ async function processVideoJob(job: Job<VideoJobData, VideoJobResult>): Promise<
     await job.updateProgress("analyzing" satisfies ProcessingStage);
     const selected = await analyzeTranscript(segments, videoDuration);
 
+    
     await job.updateProgress("generating" satisfies ProcessingStage);
     const clips: Clip[] = await Promise.all(
       selected.map(async (clip) => {
