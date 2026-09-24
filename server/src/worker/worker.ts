@@ -2,13 +2,15 @@ import { Worker, type Job } from "bullmq";
 import { getRedisConnection } from "../queue/connection.js";
 import { VIDEO_QUEUE_NAME, type VideoJobData, type VideoJobResult } from "../queue/videoQueue.js";
 import { transcribeVideo } from "../services/assemblyai.js";
+import { Readable } from "node:stream";
 import { getVideoDurationSeconds } from "../services/ffmpeg.js";
 import { analyzeTranscript } from "../services/openrouter.js";
 import { renderClip } from "./render.js";
 import type { Clip, ProcessingStage } from "../types.js";
+import { pipeline } from "node:stream/promises";
+import { createWriteStream } from "node:fs";
 import {S3Client,PutObjectCommand,GetObjectCommand} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-
 
 // This now controls how many full pipelines (transcribe + analyze + render)
 // run concurrently in this worker process, not just concurrent FFmpeg jobs -
@@ -28,6 +30,23 @@ const s3 = new S3Client({
     secretAccessKey: process.env.SECRET_ACCESS_KEY as string,
   },
 });
+
+// Use this to stream the video to  ffmpeg
+async function downloadVideoToFile(bucket: string, key: string, outputPath: string) {
+  const response = await s3.send(
+    new GetObjectCommand({
+      Bucket: process.env.BUCKET,
+      Key: 'whatever data you get from job.data'
+    }),
+  );
+
+  if (!response.Body) {
+    throw new Error("Response body is undefined.");
+  }
+
+  const videoStream = response.Body as Readable;
+  await pipeline(videoStream, createWriteStream(outputPath))
+}
 
 async function generatePresignedUrl(bucket:string,key:string): Promise<string>{
   const tempUrl = await getSignedUrl(
@@ -52,12 +71,13 @@ async function processVideoJob(job: Job<VideoJobData, VideoJobResult>): Promise<
     await job.updateProgress("analyzing" satisfies ProcessingStage);
     const selected = await analyzeTranscript(segments, videoDuration);
 
-    
     await job.updateProgress("generating" satisfies ProcessingStage);
+    const streamedVideo = downloadVideoToFile(bucket,key,'I dont know what the output path is')
+
     const clips: Clip[] = await Promise.all(
       selected.map(async (clip) => {
         const filename = await renderClip({
-          inputPath: key,
+          inputPath: streamedVideo,
           startTime: clip.start,
           endTime: clip.end,
         });

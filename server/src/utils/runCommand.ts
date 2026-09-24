@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { AppError } from "./appError.js";
+import { promises } from "node:dns";
 
 export function ffmpegEnv(): NodeJS.ProcessEnv {
   const extraDirs: string[] = [];

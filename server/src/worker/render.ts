@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 export const OUTPUT_DIR = path.resolve(__dirname, "../../output");
 
 async function cutClip(options: {
-  inputPath: string;
+  inputPath: Promise<string>;
   startTime: number;
   endTime: number;
   outputPath: string;
@@ -50,7 +50,7 @@ async function cutClip(options: {
 }
 
 export async function renderClip(options: {
-  inputPath: string;
+  inputPath: Promise<string>;
   startTime: number;
   endTime: number;
 }): Promise<string> {
