@@ -1,39 +1,40 @@
 import type { Clip } from "../types";
 import { useState } from "react";
-import { clipAssetUrl,downloadClip } from "../services/api";
+import { clipAssetUrl, downloadClip } from "../services/api";
 
 interface GeneratedClipsProps {
   clips: Clip[];
 }
 
 export function GeneratedClips({ clips }: GeneratedClipsProps) {
-  const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
   if (clips.length === 0) {
     return null;
   }
 
-  const handleDownload = async (clip:Clip, filename: string) => {
+  const handleDownload = async (url: string, filename: string) => {
+    setDownloadingId(filename);
+    setDownloadError(null);
 
-    if (!clip.url) return;
-    setDownloadingId(filename)
     try {
-      await downloadClip(clip.url,filename)
-    }catch(err) {
-      console.error("Download failed:", err);
+      await downloadClip(url, filename);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+      setDownloadError(error instanceof Error ? error.message : "Failed to download clip.");
     } finally {
-      setDownloadingId(null)
+      setDownloadingId(null);
     }
-  }
+  };
 
   return (
-    <section className="panel">
-      <h2>Generated clips</h2>
+    <section className="generated-clips" aria-label="Generated clips">
       <div className="clip-list">
         {clips.map((clip) => {
           const src = clip.url ? clipAssetUrl(clip.url) : "";
-          //console.log('url ->', clip.url)
-          //console.log('src ->',src)
-
+          const downloadUrl = clip.downloadUrl ? clipAssetUrl(clip.downloadUrl) : src;
           const filename = `${clip.title.replace(/[^\w\-]+/g, "_")}.mp4`;
 
           return (
@@ -48,15 +49,21 @@ export function GeneratedClips({ clips }: GeneratedClipsProps) {
               <p className="timestamps">
                 {clip.start.toFixed(1)}s - {clip.end.toFixed(1)}s
               </p>
-              {src && (
-                <button type="button" className="download" onClick={() => handleDownload(clip,filename)} disabled={downloadingId === filename}>
-                  {downloadingId === filename ? "Downloading..." : "Download"}
+              {downloadUrl && (
+                <button
+                  type="button"
+                  className="download"
+                  onClick={() => void handleDownload(downloadUrl, filename)}
+                  disabled={downloadingId === filename}
+                >
+                  {downloadingId === filename ? "Saving..." : "Download"}
                 </button>
               )}
             </article>
           );
         })}
       </div>
+      {downloadError && <p className="error" role="alert">{downloadError}</p>}
     </section>
   );
 }

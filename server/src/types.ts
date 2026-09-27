@@ -10,6 +10,7 @@ export interface Clip {
   title: string;
   reason: string;
   url?: string;
+  downloadUrl?: string;
 }
 
 export interface ProcessingResponse {
@@ -18,6 +19,11 @@ export interface ProcessingResponse {
 
 export interface JobEnqueuedResponse {
   jobId: string;
+}
+
+export interface UploadUrlResponse {
+  key: string;
+  uploadUrl: string;
 }
 
 export type ProcessingStage = "transcribing" | "analyzing" | "generating" | "uploading" |"pulling";

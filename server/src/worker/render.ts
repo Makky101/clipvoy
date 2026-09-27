@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import type { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { v4 as uuidv4 } from "uuid";
 import { AppError } from "../utils/appError.js";
@@ -10,13 +11,18 @@ const __dirname = path.dirname(__filename);
 
 export const OUTPUT_DIR = path.resolve(__dirname, "../../output");
 
+export interface RenderedClip {
+  filename: string;
+  outputPath: string;
+}
+
 async function cutClip(options: {
-  inputPath: Promise<string>;
+  input: Readable;
   startTime: number;
   endTime: number;
   outputPath: string;
 }): Promise<void> {
-  const { inputPath, startTime, endTime, outputPath } = options;
+  const { input, startTime, endTime, outputPath } = options;
   const duration = endTime - startTime;
 
   if (duration <= 0) {
@@ -31,10 +37,10 @@ async function cutClip(options: {
   // process.
   await runCommand("ffmpeg", [
     "-y",
+    "-i",
+    "pipe:0",
     "-ss",
     startTime.toFixed(3),
-    "-i",
-    inputPath,
     "-t",
     duration.toFixed(3),
     "-vf",
@@ -46,24 +52,24 @@ async function cutClip(options: {
     "-movflags",
     "+faststart",
     outputPath,
-  ]);
+  ], input);
 }
 
 export async function renderClip(options: {
-  inputPath: Promise<string>;
+  input: Readable;
   startTime: number;
   endTime: number;
-}): Promise<string> {
+}): Promise<RenderedClip> {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
   const filename = `clip-${uuidv4()}.mp4`;
   const outputPath = path.join(OUTPUT_DIR, filename);
 
   await cutClip({
-    inputPath: options.inputPath,
+    input: options.input,
     startTime: options.startTime,
     endTime: options.endTime,
     outputPath,
   });
 
-  return filename;
+  return { filename, outputPath };
 }

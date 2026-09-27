@@ -3,7 +3,6 @@ import { fileURLToPath } from "node:url";
 import cors from "cors";
 import dotenv from "dotenv";
 import express, { type NextFunction, type Request, type Response } from "express";
-import multer from "multer";
 import { videoRouter } from "./routes/video.js";
 import { AppError } from "./utils/appError.js";
 
@@ -30,15 +29,6 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-  if (err instanceof multer.MulterError) {
-    if (err.code === "LIMIT_FILE_SIZE") {
-      res.status(413).json({ error: "Video file is too large. Maximum size is 200MB." });
-      return;
-    }
-    res.status(400).json({ error: "Video upload failed." });
-    return;
-  }
-
   if (err instanceof AppError) {
     res.status(err.statusCode).json({ error: err.message });
     return;

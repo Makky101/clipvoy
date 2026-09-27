@@ -6,7 +6,6 @@ import { runCommand } from "../utils/runCommand.js";
 // synchronous-feeling ffprobe check needed up front on the main server.
 export async function getVideoDurationSeconds(url: string): Promise<number> {
   const output = await runCommand("ffprobe", [
-    "-allowed_extensions",
     "-v",
     "error",
     "-show_entries",

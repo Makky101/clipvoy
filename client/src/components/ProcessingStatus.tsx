@@ -3,6 +3,7 @@ import type { ProcessingStage } from "../types";
 const STAGE_LABELS: Record<Exclude<ProcessingStage, "idle">, string> = {
   uploading: "Uploading video...",
   queued: "Waiting in queue...",
+  pulling: "Preparing source...",
   transcribing: "Transcribing video...",
   analyzing: "Analyzing transcript...",
   generating: "Generating clips...",
@@ -20,8 +21,7 @@ export function ProcessingStatus({ stage, error }: ProcessingStatusProps) {
   }
 
   return (
-    <section className="panel">
-      <h2>Status</h2>
+    <section className="processing-status" aria-live="polite">
       {stage !== "idle" && <p className="status">{STAGE_LABELS[stage]}</p>}
       {error && <p className="error">{error}</p>}
     </section>

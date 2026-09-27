@@ -1,10 +1,10 @@
 import { useState } from "react";
+import { CompletionModal } from "./components/CompletionModal";
 import { GeneratedClips } from "./components/GeneratedClips";
 import { ProcessingStatus } from "./components/ProcessingStatus";
 import { VideoUploader } from "./components/VideoUploader";
 import { processVideo } from "./services/api";
-import clipvoyLogo from './assets/clipvoy-logo.svg'
-//import { mockClips } from "./components/mock_data";
+import clipvoyLogo from "./assets/clipvoy-logo.svg";
 import type { Clip, ProcessingStage } from "./types";
 import "./App.css";
 
@@ -13,13 +13,7 @@ function App() {
   const [stage, setStage] = useState<ProcessingStage>("idle");
   const [error, setError] = useState<string | null>(null);
   const [clips, setClips] = useState<Clip[]>([]);
-
-  //test videos are stored on mock_videos folder on makky's machine
-  // they are not available on server machine!
-
-  /*if (clips.length === 0) {
-    setClips(mockClips);
-  }*/
+  const [isCompletionOpen, setIsCompletionOpen] = useState(false);
 
   const handleProcess = async () => {
     if (!selectedFile) {
@@ -29,6 +23,7 @@ function App() {
 
     setError(null);
     setClips([]);
+    setIsCompletionOpen(false);
     setStage("uploading");
 
     try {
@@ -38,6 +33,7 @@ function App() {
       const result = await processVideo(selectedFile, setStage);
       setClips(result.clips);
       setStage("complete");
+      setIsCompletionOpen(true);
     } catch (err) {
       setStage("idle");
       setError(err instanceof Error ? err.message : "Failed to process video.");
@@ -49,8 +45,7 @@ function App() {
   return (
     <main className="app">
       <header>
-        <img src={clipvoyLogo} alt="ClipVoy-Logo" className="logo"/>
-        <p className="muted">Upload a video and generate short-form clips.</p>
+        <img src={clipvoyLogo} alt="ClipVoy" className="logo" />
       </header>
 
       <VideoUploader
@@ -66,7 +61,8 @@ function App() {
       />
       
       <ProcessingStatus stage={stage} error={error} />
-      <GeneratedClips clips={clips} />
+      {!isCompletionOpen && <GeneratedClips clips={clips} />}
+      {isCompletionOpen && <CompletionModal clips={clips} onClose={() => setIsCompletionOpen(false)} />}
     </main>
   );
 }

@@ -1,4 +1,10 @@
-import type { JobEnqueuedResponse, JobStatusResponse, ProcessingResponse, ProcessingStage } from "../types";
+import type {
+  JobEnqueuedResponse,
+  JobStatusResponse,
+  ProcessingResponse,
+  ProcessingStage,
+  UploadUrlResponse,
+} from "../types";
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:3000";
 
@@ -16,12 +22,32 @@ export async function processVideo(
   file: File,
   onStage?: (stage: ProcessingStage) => void,
 ): Promise<ProcessingResponse> {
-  const formData = new FormData();
-  formData.append("video", file);
+  const contentType = file.type || "video/mp4";
+  const uploadRequest = await fetch(`${API_BASE}/api/videos/uploads`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fileName: file.name, contentType }),
+  });
+
+  const uploadDetails = (await uploadRequest.json()) as UploadUrlResponse & { error?: string };
+  if (!uploadRequest.ok || !uploadDetails.uploadUrl || !uploadDetails.key) {
+    throw new Error(uploadDetails.error || "Failed to prepare the video upload.");
+  }
+
+  const uploadResponse = await fetch(uploadDetails.uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": contentType },
+    body: file,
+  });
+
+  if (!uploadResponse.ok) {
+    throw new Error("Failed to upload the video to storage.");
+  }
 
   const response = await fetch(`${API_BASE}/api/videos/process`, {
     method: "POST",
-    body: formData,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key: uploadDetails.key, originalName: file.name }),
   });
 
   const enqueued = (await response.json()) as JobEnqueuedResponse & { error?: string };
@@ -56,6 +82,9 @@ export async function processVideo(
     }
 
     if (status.status === "completed") {
+      if (!Array.isArray(status.clips) || status.clips.length === 0) {
+        throw new Error("Processing completed without any downloadable clips. Please try the video again.");
+      }
       return { clips: status.clips };
     }
 
@@ -68,25 +97,40 @@ export async function processVideo(
 }
 
 export function clipAssetUrl(url: string): string {
-  return `${API_BASE}${url}`;
+  return url.startsWith("http://") || url.startsWith("https://") ? url : `${API_BASE}${url}`;
 }
 
-export async function downloadClip(url: string, filename: string): Promise<void> {
-  const response = await fetch(clipAssetUrl(url));
+type SaveFilePicker = (options: {
+  suggestedName: string;
+  types: Array<{ description: string; accept: Record<string, string[]> }>;
+}) => Promise<{ createWritable: () => Promise<WritableStream<Uint8Array>> }>;
 
-  if (!response.ok) {
-    throw new Error("Failed to download clip.");
+type SavePickerWindow = Window & { showSaveFilePicker?: SaveFilePicker };
+
+export async function downloadClip(url: string, filename: string): Promise<void> {
+  const pickerWindow = window as SavePickerWindow;
+
+  if (window.isSecureContext && pickerWindow.showSaveFilePicker) {
+    const fileHandle = await pickerWindow.showSaveFilePicker({
+      suggestedName: filename,
+      types: [{ description: "MP4 video", accept: { "video/mp4": [".mp4"] } }],
+    });
+    const response = await fetch(clipAssetUrl(url));
+
+    if (!response.ok || !response.body) {
+      throw new Error("Failed to download clip.");
+    }
+
+    const writable = await fileHandle.createWritable();
+    await response.body.pipeTo(writable);
+    return;
   }
 
-  const blob = await response.blob();
-  const blobUrl = URL.createObjectURL(blob);
-
   const link = document.createElement("a");
-  link.href = blobUrl;
+  link.href = clipAssetUrl(url);
   link.download = filename;
   document.body.appendChild(link);
   link.click();
   link.remove();
-
-  URL.revokeObjectURL(blobUrl);
 }
+

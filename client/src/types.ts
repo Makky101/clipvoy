@@ -10,6 +10,7 @@ export interface Clip {
   title: string;
   reason: string;
   url?: string;
+  downloadUrl?: string;
 }
 
 export interface ProcessingResponse {
@@ -20,10 +21,15 @@ export interface JobEnqueuedResponse {
   jobId: string;
 }
 
+export interface UploadUrlResponse {
+  key: string;
+  uploadUrl: string;
+}
+
 export type JobStatusResponse =
   | { status: "queued" }
-  | { status: "processing"; stage?: "transcribing" | "analyzing" | "generating" }
+  | { status: "processing"; stage?: "pulling" | "transcribing" | "analyzing" | "generating" | "uploading" }
   | { status: "completed"; clips: Clip[] }
   | { status: "failed"; error: string };
 
-export type ProcessingStage = "idle" | "uploading" | "queued" | "transcribing" | "analyzing" | "generating" | "complete";
+export type ProcessingStage = "idle" | "uploading" | "queued" | "pulling" | "transcribing" | "analyzing" | "generating" | "complete";

@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
+import type { Readable } from "node:stream";
 import { AppError } from "./appError.js";
-import { promises } from "node:dns";
 
 export function ffmpegEnv(): NodeJS.ProcessEnv {
   const extraDirs: string[] = [];
@@ -20,7 +20,11 @@ export function ffmpegEnv(): NodeJS.ProcessEnv {
   };
 }
 
-export function runCommand(command: string, args: string[]): Promise<string> {
+export function runCommand(
+  command: string,
+  args: readonly string[],
+  input?: Readable,
+): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { windowsHide: true, env: ffmpegEnv() });
     let stdout = "";
@@ -51,5 +55,18 @@ export function runCommand(command: string, args: string[]): Promise<string> {
       }
       resolve(stdout || stderr);
     });
+
+    if (input) {
+      input.on("error", (error) => {
+        child.kill();
+        reject(error);
+      });
+      child.stdin.on("error", (error: NodeJS.ErrnoException) => {
+        if (error.code !== "EPIPE") {
+          reject(error);
+        }
+      });
+      input.pipe(child.stdin);
+    }
   });
 }

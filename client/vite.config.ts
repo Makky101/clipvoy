@@ -11,10 +11,6 @@ export default defineConfig({
         changeOrigin: true,
         timeout: 15 * 60 * 1000,
       },
-      "/output": {
-        target: "http://localhost:3000",
-        changeOrigin: true,
-      },
     },
   },
 });
