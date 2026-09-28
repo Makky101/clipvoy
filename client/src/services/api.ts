@@ -21,7 +21,7 @@ function sleep(ms: number): Promise<void> {
 export async function processVideo(
   file: File,
   onStage?: (stage: ProcessingStage) => void,
-): Promise<ProcessingResponse> {
+): Promise<ProcessingResponse>{
   const contentType = file.type || "video/mp4";
   const uploadRequest = await fetch(`${API_BASE}/api/videos/uploads`, {
     method: "POST",
