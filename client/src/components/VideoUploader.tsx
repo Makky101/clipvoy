@@ -22,6 +22,7 @@ export function VideoUploader({
   return (
     <section className="panel">
       <h2>Upload video</h2>
+      <p className="muted">Turn podcasts to clip instantly.</p>
       <p className="muted">Select a video file, then start processing.</p>
 
       <label className="file-picker">
