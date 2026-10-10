@@ -23,6 +23,16 @@ export function ProcessingStatus({ stage, error }: ProcessingStatusProps) {
   return (
     <section className="processing-status" aria-live="polite">
       {stage !== "idle" && <p className="status">{STAGE_LABELS[stage]}</p>}
+      {stage !== "idle" && stage !== "complete" && !error && (
+        <div
+          className="processing-bar"
+          role="progressbar"
+          aria-label="Video processing"
+          aria-valuetext={STAGE_LABELS[stage]}
+        >
+          <span className="processing-bar-fill" />
+        </div>
+      )}
       {error && <p className="error">{error}</p>}
     </section>
   );
