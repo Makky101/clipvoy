@@ -44,23 +44,35 @@ function App() {
 
   return (
     <main className="app">
-      <header>
+      <header className="app-header">
         <img src={clipvoyLogo} alt="ClipVoy" className="logo" />
+        <span className="header-note">Podcast clipping studio</span>
       </header>
 
-      <VideoUploader
-        selectedFile={selectedFile}
-        disabled={busy}
-        onFileChange={(file) => {
-          setSelectedFile(file);
-          setError(null);
-        }}
-        onProcess={() => {
-          handleProcess();
-        }}
-      />
-      
-      <ProcessingStatus stage={stage} error={error} />
+      <div className="workspace">
+        <section className="intro" aria-labelledby="page-title">
+          <h1 id="page-title">Long conversations.<br />Short, standout clips.</h1>
+          <p className="intro-copy">Give your podcast a second life. Turn your recording into vertical clips for TikTok, Reels, and YouTube Shorts.</p>
+          <div className="workflow-note">
+            <h2>From recording to ready to share</h2>
+            <p>Upload your video. ClipVoy transcribes the conversation, selects moments, and generates clips for you to preview and download.</p>
+          </div>
+        </section>
+        <div className="upload-workspace">
+          <VideoUploader
+            selectedFile={selectedFile}
+            disabled={busy}
+            onFileChange={(file) => {
+              setSelectedFile(file);
+              setError(null);
+            }}
+            onProcess={() => {
+              handleProcess();
+            }}
+          />
+          <ProcessingStatus stage={stage} error={error} />
+        </div>
+      </div>
       {!isCompletionOpen && <GeneratedClips clips={clips} />}
       {isCompletionOpen && <CompletionModal clips={clips} onClose={() => setIsCompletionOpen(false)} />}
     </main>

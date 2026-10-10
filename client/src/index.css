@@ -1,19 +1,26 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&display=swap');
+
 :root {
-  font-family: Inter, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  color: #0f172a;
-  background: #f8fafc;
+  font-family: 'Barlow', 'Segoe UI', sans-serif;
+  line-height: 1.55;
+  color: var(--ink);
+  background: var(--canvas);
+  --canvas: #edf3f8;
+  --surface: #ffffff;
+  --ink: #162d46;
+  --muted: #52677c;
+  --line: #cbd8e4;
+  --signal: #b84319;
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-5: 48px;
+  --space-6: 64px;
 }
 
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  min-width: 320px;
-}
-
-#root {
-  min-height: 100vh;
-}
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+#root { min-height: 100vh; }
+button, input { font: inherit; }
+::selection { color: var(--surface); background: var(--signal); }
