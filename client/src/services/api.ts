@@ -21,6 +21,7 @@ function sleep(ms: number): Promise<void> {
 export async function processVideo(
   file: File,
   onStage?: (stage: ProcessingStage) => void,
+  onJobCreated?: (jobId: string) => void,
 ): Promise<ProcessingResponse>{
   const contentType = file.type || "video/mp4";
   const uploadRequest = await fetch(`${API_BASE}/api/videos/uploads`, {
@@ -60,8 +61,16 @@ export async function processVideo(
     throw new Error("Error_from_server: The server did not return a job id.");
   }
 
+  onJobCreated?.(enqueued.jobId);
   onStage?.("queued");
+  return pollVideoJob(enqueued.jobId, onStage);
+}
 
+export async function pollVideoJob(
+  jobId: string,
+  onStage?: (stage: ProcessingStage) => void,
+  signal?: AbortSignal,
+): Promise<ProcessingResponse> {
   const startedAt = Date.now();
 
   // The upload request now returns almost immediately - the actual pipeline
@@ -72,9 +81,8 @@ export async function processVideo(
       throw new Error("Processing is taking longer than expected. Please try again later.");
     }
 
-    await sleep(POLL_INTERVAL_MS);
-
-    const statusResponse = await fetch(`${API_BASE}/api/videos/jobs/${enqueued.jobId}`);
+    signal?.throwIfAborted();
+    const statusResponse = await fetch(`${API_BASE}/api/videos/jobs/${encodeURIComponent(jobId)}`, { signal });
     const status = (await statusResponse.json()) as JobStatusResponse & { error?: string };
 
     if (!statusResponse.ok) {
@@ -93,6 +101,7 @@ export async function processVideo(
     }
 
     onStage?.(status.status === "processing" ? status.stage ?? "transcribing" : "queued");
+    await sleep(POLL_INTERVAL_MS);
   }
 }
 
