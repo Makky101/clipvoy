@@ -1,4 +1,12 @@
 .app { width: min(100% - 80px, 1240px); margin: 0 auto; padding: var(--space-3) 0 var(--space-6); }
+.auth-workspace { align-items: center; min-height: 70vh; }
+.auth-panel { width: 100%; max-width: 460px; justify-self: end; }
+.auth-panel input:focus-visible { outline: 3px solid var(--signal); outline-offset: 2px; }
+.auth-unavailable { margin-top: 24px; padding: 16px; background: var(--canvas); border-left: 3px solid var(--signal); }
+.auth-fields { min-width: 0; margin: 0; padding: 0; border: 0; }
+.auth-loading { padding: 64px 24px; text-align: center; }
+.account-bar { width: min(100% - 32px, 1240px); margin: 16px auto 0; display: flex; align-items: center; justify-content: flex-end; gap: 16px; flex-wrap: wrap; overflow-wrap: anywhere; }
+@media (max-width: 800px) { .auth-panel { max-width: none; } }
 .app-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: var(--space-3); border-bottom: 1px solid var(--line); }
 .logo { display: block; width: 154px; height: auto; }
 .header-note { color: var(--muted); font-size: .9rem; font-weight: 500; }
