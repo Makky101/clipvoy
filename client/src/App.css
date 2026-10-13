@@ -4,8 +4,35 @@
 .auth-panel input:focus-visible { outline: 3px solid var(--signal); outline-offset: 2px; }
 .auth-unavailable { margin-top: 24px; padding: 16px; background: var(--canvas); border-left: 3px solid var(--signal); }
 .auth-fields { min-width: 0; margin: 0; padding: 0; border: 0; }
+.billing-section { padding: 18px 0; border-bottom: 1px solid var(--line); }
+.credits-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.credits-heading h2 { margin: 0; font-size: 1.05rem; }
+.credits-heading .muted { margin-top: 4px; font-size: .85rem; }
+.billing-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-width: 0; }
+.billing-actions button, .billing-error button { min-height: 36px; padding: 6px 12px; font-size: .875rem; }
+.billing-error { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); background: var(--surface); font-size: .875rem; overflow-wrap: anywhere; }
+.billing-error button { flex-shrink: 0; }
+.subscription-plans { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 24px; }
+.subscription-plan { padding: 24px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.subscription-plan h3 { margin: 0; font-size: 1.25rem; }
+.subscription-plan button { width: 100%; }
+.plan-price { margin: 12px 0; font-size: 2.4rem; font-weight: 600; }
+.plan-price span { font-size: 1rem; font-weight: 400; color: var(--muted); }
+.plan-terms { grid-column: 1 / -1; margin: 0; font-size: .9rem; color: var(--muted); }
+.credit-notice { padding: 12px 16px; border-left: 3px solid var(--signal); background: var(--surface); }
+@media (max-width: 600px) { .subscription-plans { grid-template-columns: 1fr; } }
 .auth-loading { padding: 64px 24px; text-align: center; }
-.account-bar { width: min(100% - 32px, 1240px); margin: 16px auto 0; display: flex; align-items: center; justify-content: flex-end; gap: 16px; flex-wrap: wrap; overflow-wrap: anywhere; }
+.account-bar { display: flex; align-items: center; gap: 12px; min-width: 0; padding-left: 12px; border-left: 1px solid var(--line); flex-wrap: wrap; }
+.account-email { max-width: 24ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .875rem; color: var(--muted); }
+.account-bar .error { flex-basis: 100%; margin: 0; font-size: .875rem; }
+@media (max-width: 600px) {
+  .billing-actions { width: 100%; }
+  .account-bar { margin-left: auto; }
+  .account-email { max-width: 18ch; }
+}
+@media (max-width: 420px) {
+  .account-bar { width: 100%; margin-left: 0; padding: 10px 0 0; border-left: 0; border-top: 1px solid var(--line); justify-content: space-between; }
+}
 @media (max-width: 800px) { .auth-panel { max-width: none; } }
 .app-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: var(--space-3); border-bottom: 1px solid var(--line); }
 .logo { display: block; width: 154px; height: auto; }

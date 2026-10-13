@@ -11,6 +11,7 @@ import { analyzeTranscript } from "../services/openrouter.js";
 import { storage, storageBucket } from "../services/storage.js";
 import { renderClip } from "./render.js";
 import type { Clip, ProcessingStage } from "../types.js";
+import { getCreditJob, settleCredit } from '../services/accounts.js';
 
 // This now controls how many full pipelines (transcribe + analyze + render)
 // run concurrently in this worker process, not just concurrent FFmpeg jobs -
@@ -55,10 +56,17 @@ async function uploadRenderedClip(outputPath: string, key: string): Promise<void
 async function processVideoJob(job: Job<VideoJobData, VideoJobResult>): Promise<VideoJobResult> {
   const { key } = job.data;
   try {
+    if (!job.id || !job.data.userId) throw new Error('Job has no credit reservation.');
+    const reservation = await getCreditJob(job.id, job.data.userId);
+    if (reservation.state === 'refunded') throw new Error('Job credit was already refunded.');
+    if (reservation.state === 'completed') return { clips: reservation.clips as Clip[] };
     await job.updateProgress("pulling" satisfies ProcessingStage);
     const url = await getDownloadUrl(key);
     await job.updateProgress("transcribing" satisfies ProcessingStage);
     const videoDuration = await getVideoDurationSeconds(url);
+    if (!Number.isFinite(videoDuration) || videoDuration <= 0 || videoDuration > 3600) {
+      throw new Error('Videos must be no longer than 60 minutes.');
+    }
     const segments = await transcribeVideo(url);
     await job.updateProgress("analyzing" satisfies ProcessingStage);
     const selected = await analyzeTranscript(segments, videoDuration);
@@ -95,8 +103,10 @@ async function processVideoJob(job: Job<VideoJobData, VideoJobResult>): Promise<
       }),
     );
 
+    await settleCredit(job.id!, false, clips);
     return { clips };
   } catch (error: unknown) {
+    if (job.id && job.data.userId) await settleCredit(job.id, true);
     if (error instanceof Error) {
       console.error("This error occurred ->", error.message);
     }

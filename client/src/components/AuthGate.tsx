@@ -4,8 +4,9 @@ import { ThemeSupa } from '@supabase/auth-ui-shared';
 import type { Session } from '@supabase/supabase-js';
 import { authUiClient, supabase } from '../services/supabase';
 import clipvoyLogo from '../assets/clipvoy-logo.svg';
+import { BillingProvider } from './BillingProvider';
 
-export function AuthGate({ children }: { children: ReactNode }) {
+export function AuthGate({ children }: { children: (accountBar: ReactNode) => ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(Boolean(supabase));
   const [error, setError] = useState<string | null>(null);
@@ -49,14 +50,16 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   if (loading) return <main className="auth-loading" role="status">Loading your account…</main>;
 
-  if (session && !recovering) return <>
+  if (session && !recovering) {
+    const accountBar = (
     <div className="account-bar">
-      <span>{session.user.email}</span>
+      <span className="account-email" title={session.user.email}>{session.user.email}</span>
       <button className="close-button" disabled={signingOut} onClick={() => void signOut()}>{signingOut ? 'Signing out…' : 'Sign out'}</button>
       {error && <p className="error" role="alert">{error}</p>}
     </div>
-    {children}
-  </>;
+    );
+    return <BillingProvider key={session.user.id} userId={session.user.id}>{children(accountBar)}</BillingProvider>;
+  }
 
   return <main className="app">
     <header className="app-header">
@@ -66,7 +69,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
     <div className="workspace auth-workspace">
       <section className="intro" aria-labelledby="auth-title">
         <h1 id="auth-title">Your next great clip<br />starts here.</h1>
-        <p className="intro-copy">Create your account to turn long conversations into clips for TikTok, Reels, and YouTube Shorts.</p>
+        <p className="intro-copy">Start with 3 free credits. Turn long conversations into clips for TikTok, Reels, and YouTube Shorts.</p>
         <div className="workflow-note"><h2>More from every conversation</h2><p>Upload a recording, discover standout moments, and download clips ready to share.</p></div>
       </section>
       <section className="panel auth-panel" aria-labelledby="account-title">

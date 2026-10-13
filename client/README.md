@@ -14,7 +14,7 @@ The page starts with signup and includes Supabase's sign-in and password-recover
 
 Without project credentials the page displays the prebuilt signup form with its fields and submission disabled, plus a setup notice. The isolated preview client blocks all network requests and does not persist a session. Validate signup, confirmation, sign-in, refresh, sign-out, and password recovery once your project is configured.
 
-This change controls the client UI only. The video API still needs server-side token verification before authentication can protect backend endpoints. Existing clip/job browser storage is shared on the device and is not scoped to individual accounts.
+The video API now verifies Supabase sessions, enforces account credits, and scopes uploads, jobs, and browser clip history to the signed-in user. Configure the database and server before processing videos. See [credits and Stripe setup](../docs/billing-setup.md) for the SQL migration, server key placeholders, recurring prices, and webhook setup.
 
 ## Development
 

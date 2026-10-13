@@ -2,6 +2,8 @@
 
 Upload a video, transcribe it with AssemblyAI, find the best short clips with an OpenRouter LLM, then cut those clips with FFmpeg.
 
+Accounts now use Supabase authentication and durable credits. New accounts get 3 free credits; each video processing job costs 1 credit. Weekly and monthly subscriptions use Stripe Checkout and verified paid-invoice webhooks. **Before processing videos, follow [credits and Stripe setup](docs/billing-setup.md)**, run the SQL migration, and configure the server-side Supabase key. Payment credentials stay in `server/.env`; browser credentials stay in `client/.env.local`.
+
 ## Requirements
 
 - Node.js 18+
@@ -40,7 +42,7 @@ Set these in `server/.env`:
 | `OPENROUTER_MODEL` | OpenRouter model id, for example `openai/gpt-4o-mini` |
 | `CLIENT_URL` | Frontend origin used for CORS (`http://localhost:5173`) |
 
-Never put API keys in the frontend.
+Never put secret API keys in the frontend. The Supabase publishable key is intended for the browser.
 
 ## Install FFmpeg
 
@@ -83,28 +85,28 @@ npm run dev
 6. Wait for transcription, analysis, and clip generation
 7. Play or download the generated clips
 
-Processing is a single request/response. Long videos can take several minutes.
+Run `npm run worker` in a separate terminal in `server`. Processing uses a BullMQ queue backed by Redis; the client polls the authenticated job endpoint. Long videos can take several minutes.
 
 ## How it works
 
 ```text
 Frontend upload
-  → POST /api/videos/process (multipart field: video)
-  → Unique temp file on disk
+  → Authenticated POST /api/videos/uploads (signed upload URL)
+  → Direct video upload to object storage
+  → POST /api/videos/process (atomic credit reservation + queue)
   → AssemblyAI transcription (timestamped segments)
   → OpenRouter JSON clip suggestions
   → Timestamp validation
   → FFmpeg cuts unique clip files
-  → JSON with public /output/... URLs
+  → Authenticated job polling + signed clip download URLs
   → Frontend players
 ```
 
-Temporary uploads are deleted after processing. Generated clips stay in `server/output/` so they can be played and downloaded.
+Uploaded recordings and generated clips stay in object storage according to the bucket's lifecycle rules. Temporary rendered files are removed after uploading.
 
 ## Limitations
 
-- No accounts, database, or cloud storage
-- Requests are synchronous (no job queue)
-- Clips are not cleaned up automatically
+- Requires Supabase, Redis, an object-storage bucket, and a running worker
+- Storage retention must be configured on the bucket
 - Best results need clear speech and a video long enough for 20–90s clips
-- Maximum upload size is 200MB
+- Maximum recording length is 60 minutes; maximum upload size is 2 GB

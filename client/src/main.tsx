@@ -6,6 +6,6 @@ import { AuthGate } from './components/AuthGate'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthGate><App /></AuthGate>
+    <AuthGate>{(accountBar) => <App accountBar={accountBar} />}</AuthGate>
   </StrictMode>
 )

@@ -5,6 +5,7 @@ import type {
   ProcessingStage,
   UploadUrlResponse,
 } from "../types";
+import { authHeaders } from './accountApi';
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:3000";
 
@@ -23,10 +24,13 @@ export async function processVideo(
   onStage?: (stage: ProcessingStage) => void,
   onJobCreated?: (jobId: string) => void,
 ): Promise<ProcessingResponse>{
+  if (file.size === 0 || file.size > 2 * 1024 * 1024 * 1024) {
+    throw new Error('Choose a video between 1 byte and 2 GB.');
+  }
   const contentType = file.type || "video/mp4";
   const uploadRequest = await fetch(`${API_BASE}/api/videos/uploads`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...await authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({ fileName: file.name, contentType }),
   });
 
@@ -47,7 +51,7 @@ export async function processVideo(
 
   const response = await fetch(`${API_BASE}/api/videos/process`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...await authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({ key: uploadDetails.key, originalName: file.name }),
   });
 
@@ -82,7 +86,7 @@ export async function pollVideoJob(
     }
 
     signal?.throwIfAborted();
-    const statusResponse = await fetch(`${API_BASE}/api/videos/jobs/${encodeURIComponent(jobId)}`, { signal });
+    const statusResponse = await fetch(`${API_BASE}/api/videos/jobs/${encodeURIComponent(jobId)}`, { signal, headers: await authHeaders() });
     const status = (await statusResponse.json()) as JobStatusResponse & { error?: string };
 
     if (!statusResponse.ok) {

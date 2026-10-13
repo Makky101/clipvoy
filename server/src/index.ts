@@ -5,6 +5,8 @@ import dotenv from "dotenv";
 import express, { type NextFunction, type Request, type Response } from "express";
 import { videoRouter } from "./routes/video.js";
 import { AppError } from "./utils/appError.js";
+import { billingRouter, stripeWebhook } from './routes/billing.js';
+import { startCreditDispatcher } from './services/dispatch.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,9 +22,12 @@ app.use(
     origin: allowedOrigins,
   }),
 );
+// Signature verification needs the exact request bytes, before JSON parsing.
+app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), stripeWebhook);
 app.use(express.json());
 
 app.use("/api/videos", videoRouter);
+app.use('/api/billing', billingRouter);
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
@@ -44,11 +49,13 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
 const server = app.listen(port, () => {
   console.log(`Server is running on port: ${port}`);
 });
+const stopDispatcher = startCreditDispatcher();
 
 server.timeout = 15 * 60 * 1000;
 server.headersTimeout = 15 * 60 * 1000;
 
 function shutdown(signal: string): void {
+  stopDispatcher();
   console.log(`Received ${signal}, shutting down...`);
   server.close(() => process.exit(0));
 }

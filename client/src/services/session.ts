@@ -7,9 +7,9 @@ interface VideoSession {
 
 const STORAGE_KEY = `clipvoy:video-session:${import.meta.env.VITE_API_URL ?? "http://localhost:3000"}`;
 
-export function readVideoSession(): VideoSession {
+export function readVideoSession(userId: string): VideoSession {
   try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null");
+    const saved = JSON.parse(localStorage.getItem(`${STORAGE_KEY}:${userId}`) ?? "null");
     if (saved && (saved.jobId === null || typeof saved.jobId === "string") &&
       Array.isArray(saved.clips) && saved.clips.every((clip: Clip) =>
         clip && typeof clip.title === "string" && typeof clip.reason === "string" &&
@@ -24,9 +24,9 @@ export function readVideoSession(): VideoSession {
   return { jobId: null, clips: [] };
 }
 
-export function saveVideoSession(session: VideoSession): void {
+export function saveVideoSession(userId: string, session: VideoSession): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    localStorage.setItem(`${STORAGE_KEY}:${userId}`, JSON.stringify(session));
   } catch {
     // Processing still works when browser storage is unavailable.
   }

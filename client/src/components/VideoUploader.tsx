@@ -22,7 +22,7 @@ export function VideoUploader({
   return (
     <section className="panel">
       <h2>Upload video</h2>
-      <p className="muted">Select a video file, then start processing.</p>
+      <p className="muted">Select a video up to 60 minutes and 2 GB. Processing uses 1 credit.</p>
 
       <label className="file-picker">
         <input
