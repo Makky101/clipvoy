@@ -77,6 +77,9 @@ async function ensureCustomer(account: CreditAccount, email?: string): Promise<s
 }
 
 export async function createCheckout(userId: string, email: string | undefined, requested: PlanId): Promise<string> {
+  const returnOrigin = clientUrl();
+  const successUrl = `${returnOrigin}/?billing=success&session_id={CHECKOUT_SESSION_ID}`;
+  const cancelUrl = `${returnOrigin}/?billing=cancelled`;
   const plans = await getPlans();
   if (!plans.find((plan) => plan.id === requested)?.ready) throw new AppError('This subscription is not available yet.', 503);
   const initial = await getAccount(userId);
@@ -90,9 +93,12 @@ export async function createCheckout(userId: string, email: string | undefined, 
   if (await getSubscription(customer)) throw new AppError('You already have a subscription. Use Manage subscription to cancel it.', 409);
   if (account.checkout_session_id) {
     const pending = await getStripe().checkout.sessions.retrieve(account.checkout_session_id);
-    if (pending.status === 'open' && account.checkout_plan === requested && pending.url) return pending.url;
+    const currentReturnUrls = pending.cancel_url === cancelUrl &&
+      (pending.success_url === successUrl || pending.success_url === successUrl.replace('{CHECKOUT_SESSION_ID}', pending.id));
+    if (pending.status === 'open' && account.checkout_plan === requested && currentReturnUrls && pending.url) return pending.url;
     if (pending.status === 'complete') throw new AppError('Payment is being confirmed. Please refresh your credits shortly.', 409);
-    // Expiring the old session prevents it being paid after switching plans.
+    // Replace sessions with an old return address as well as a different plan.
+    // Expiring first prevents the old session being paid alongside its replacement.
     if (pending.status === 'open') await getStripe().checkout.sessions.expire(pending.id);
     // Clear only the generation we inspected. A concurrent checkout remains protected.
     const { error: clearError } = await getAdmin().from('credit_accounts').update({ checkout_until: null, checkout_session_id: null })
@@ -109,7 +115,7 @@ export async function createCheckout(userId: string, email: string | undefined, 
     managed_payments: { enabled: false },
     line_items: [{ price: priceId(chosen.id), quantity: 1 }],
     subscription_data: { metadata: { user_id: userId, plan: chosen.id, credits: String(chosen.credits) } },
-    success_url: `${clientUrl()}/?billing=success&session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${clientUrl()}/?billing=cancelled`,
+    success_url: successUrl, cancel_url: cancelUrl,
     // Stripe's default 24-hour expiry keeps the same creation parameters on retry.
   // v2 adds the explicit Managed Payments setting. Keep retries stable, but
   // never reuse a pre-v2 key with the changed Checkout parameters.
