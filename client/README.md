@@ -18,6 +18,10 @@ The video API now verifies Supabase sessions, enforces account credits, and scop
 
 ## Development
 
+## Styling
+
+The client uses Tailwind CSS through `@tailwindcss/vite`. All app and Supabase Auth UI styling lives in utility classes in the TSX components. `src/tailwind.css` contains only the Tailwind import; there are no handwritten CSS selectors or component stylesheets. Typography is loaded in `index.html`. Keep utility class names complete and static so Tailwind can detect them during production builds.
+
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
 Currently, two official plugins are available:

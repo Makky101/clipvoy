@@ -21,19 +21,19 @@ export function ProcessingStatus({ stage, error }: ProcessingStatusProps) {
   }
 
   return (
-    <section className="processing-status" aria-live="polite">
-      {stage !== "idle" && <p className="status">{STAGE_LABELS[stage]}</p>}
+    <section className="mt-6 rounded-xl border border-slate-200 bg-white p-4" aria-live="polite">
+      {stage !== "idle" && <p className="flex items-center gap-3 text-sm font-semibold before:size-2 before:shrink-0 before:rounded-full before:bg-[#b84319] before:content-['']">{STAGE_LABELS[stage]}</p>}
       {stage !== "idle" && stage !== "complete" && !error && (
         <div
-          className="processing-bar"
+          className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-200"
           role="progressbar"
           aria-label="Video processing"
           aria-valuetext={STAGE_LABELS[stage]}
         >
-          <span className="processing-bar-fill" />
+          <span className="block h-full w-full rounded-full bg-[#b84319]/60 motion-safe:animate-pulse" />
         </div>
       )}
-      {error && <p className="error">{error}</p>}
+      {error && <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm leading-relaxed text-red-800 wrap-anywhere">{error}</p>}
     </section>
   );
 }
